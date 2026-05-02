@@ -1,6 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "cd client && npm install && npm run build",
+  "installCommand": "npm install --workspaces",
   "outputDirectory": "client/dist",
-  "framework": null
+  "framework": "vite",
+  "env": {
+    "VITE_API_BASE": "https://backend-2wzfmyh4k-muaz-mohammad-zimams-projects.vercel.app/api"
+  }
 }
