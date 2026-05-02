@@ -175,13 +175,22 @@ async function startServer() {
   });
 
   // Socket.IO setup with proper CORS
-  io = socketIo(server, {
-    cors: {
-      origin: allowedOrigins,
-      methods: ["GET", "POST"],
-      credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization"],
+  const socketCorsOptions = {
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      console.log("Socket CORS request from:", origin);
+      return callback(null, true);
     },
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  };
+
+  io = socketIo(server, {
+    cors: socketCorsOptions,
     transports: ["websocket", "polling"],
   });
 
@@ -214,7 +223,7 @@ async function startServer() {
 
     socket.on("sendMessage", async (data) => {
       try {
-        const ChatMessage = require("./models/ChatMessage");
+        const ChatMessage = require("./Subrata/models/ChatMessage");
         const User = require("./models/User");
         const {
           createNotification,
