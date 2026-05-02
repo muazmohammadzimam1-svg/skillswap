@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { FaDownload, FaFile, FaSpinner } from "react-icons/fa";
+import api from "../../../services/api";
 
 export default function PDFReportsPage() {
   const [downloading, setDownloading] = useState({});
@@ -16,7 +16,7 @@ export default function PDFReportsPage() {
         responseType: "blob",
       };
 
-      let url = "http://localhost:5000/api/pdf-reports";
+      let url = "/pdf-reports";
       let filename = "report.pdf";
 
       if (type === "transactions") {
@@ -30,7 +30,7 @@ export default function PDFReportsPage() {
         filename = "user_report.pdf";
       }
 
-      const response = await axios.get(url, config);
+      const response = await api.get(url, config);
 
       // Create blob and download
       const blobUrl = window.URL.createObjectURL(new Blob([response.data]));

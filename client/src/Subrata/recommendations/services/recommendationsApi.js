@@ -1,10 +1,11 @@
 import axios from "axios";
+import { API_BASE } from "../../../services/api";
 
-const API_BASE = "http://localhost:5000/api/recommendations";
+const RECOMMENDATIONS_API_BASE = `${API_BASE}/recommendations`;
 
 export const recommendationsApi = {
   getRecommendations: async () => {
-    const res = await axios.get(API_BASE, {
+    const res = await axios.get(RECOMMENDATIONS_API_BASE, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res.data;
@@ -12,7 +13,7 @@ export const recommendationsApi = {
 
   generateRecommendations: async () => {
     const res = await axios.post(
-      `${API_BASE}/generate`,
+      `${RECOMMENDATIONS_API_BASE}/generate`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -23,7 +24,7 @@ export const recommendationsApi = {
 
   markAsViewed: async (id) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/view`,
+      `${RECOMMENDATIONS_API_BASE}/${id}/view`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -34,7 +35,7 @@ export const recommendationsApi = {
 
   acceptRecommendation: async (id) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/accept`,
+      `${RECOMMENDATIONS_API_BASE}/${id}/accept`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -44,7 +45,7 @@ export const recommendationsApi = {
   },
 
   deleteRecommendation: async (id) => {
-    const res = await axios.delete(`${API_BASE}/${id}`, {
+    const res = await axios.delete(`${RECOMMENDATIONS_API_BASE}/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res.data;

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -10,6 +9,7 @@ import {
   BookMarked,
 } from "lucide-react";
 import "./CourseMaterialsPage.css";
+import api from "../services/api";
 
 const CourseMaterialsPage = () => {
   const { courseId } = useParams();
@@ -33,10 +33,9 @@ const CourseMaterialsPage = () => {
   const fetchCourseMaterials = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/courses/${courseId}/content`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await api.get(`/courses/${courseId}/content`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (response.data.content) {
         // Organize content by section
@@ -93,8 +92,8 @@ const CourseMaterialsPage = () => {
 
   const handleMarkViewed = async (contentId) => {
     try {
-      const response = await axios.post(
-        `http://localhost:5000/api/course-content/${contentId}/viewed`,
+      const response = await api.post(
+        `/course-content/${contentId}/viewed`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );

@@ -1,36 +1,37 @@
 import axios from "axios";
+import { API_BASE } from "../../../services/api";
 
-const API_BASE = "http://localhost:5000/api/leaderboard";
+const LEADERBOARD_API_BASE = `${API_BASE}/leaderboard`;
 
 export const leaderboardApi = {
   getLeaderboard: async () => {
-    const res = await axios.get(`${API_BASE}/leaderboard`);
+    const res = await axios.get(`${LEADERBOARD_API_BASE}/leaderboard`);
     return res.data;
   },
 
   getUserRank: async (userId) => {
-    const res = await axios.get(`${API_BASE}/user-rank/${userId}`);
+    const res = await axios.get(`${LEADERBOARD_API_BASE}/user-rank/${userId}`);
     return res.data;
   },
 
   getAllBadges: async () => {
-    const res = await axios.get(`${API_BASE}/badges`);
+    const res = await axios.get(`${LEADERBOARD_API_BASE}/badges`);
     return res.data;
   },
 
   getUserBadges: async (userId) => {
-    const res = await axios.get(`${API_BASE}/badges/${userId}`);
+    const res = await axios.get(`${LEADERBOARD_API_BASE}/badges/${userId}`);
     return res.data;
   },
 
   getBadgeWinners: async () => {
-    const res = await axios.get(`${API_BASE}/badge-winners`);
+    const res = await axios.get(`${LEADERBOARD_API_BASE}/badge-winners`);
     return res.data;
   },
 
   awardBadge: async (userId, badgeId) => {
     const res = await axios.post(
-      `${API_BASE}/award-badge`,
+      `${LEADERBOARD_API_BASE}/award-badge`,
       { userId, badgeId },
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -41,7 +42,7 @@ export const leaderboardApi = {
 
   autoAwardBadges: async () => {
     const res = await axios.post(
-      `${API_BASE}/auto-award`,
+      `${LEADERBOARD_API_BASE}/auto-award`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

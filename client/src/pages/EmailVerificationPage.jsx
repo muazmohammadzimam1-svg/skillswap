@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
 import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthActions from "../components/AuthActions";
 import "../components/FuturisticStyles.css";
+import api from "../services/api";
 
 export default function EmailVerificationPage() {
   const [searchParams] = useSearchParams();
@@ -25,10 +25,7 @@ export default function EmailVerificationPage() {
       }
 
       try {
-        const response = await axios.post(
-          "http://localhost:5000/api/auth/verify-email",
-          { token },
-        );
+        const response = await api.post("/auth/verify-email", { token });
         setStatus("success");
         setMessage(response.data.msg);
         setTimeout(() => navigate("/login"), 3000);
@@ -50,9 +47,7 @@ export default function EmailVerificationPage() {
 
     setResendLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/resend-verification", {
-        email,
-      });
+      await api.post("/auth/resend-verification", { email });
       setMessage("Verification email resent! Check your inbox.");
       setStatus("success");
       setEmail("");

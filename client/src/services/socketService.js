@@ -1,5 +1,6 @@
 import io from "socket.io-client";
 import { getToken } from "../utils/auth";
+import { SOCKET_URL } from "./api";
 
 let socket = null;
 
@@ -9,7 +10,7 @@ export const initializeSocket = (tokenParam) => {
   const token = tokenParam || getToken();
   if (!token) return null;
 
-  socket = io("http://localhost:5000", {
+  socket = io(SOCKET_URL, {
     auth: {
       token,
     },

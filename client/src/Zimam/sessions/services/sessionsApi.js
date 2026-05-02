@@ -1,17 +1,18 @@
 import axios from "axios";
+import { API_BASE } from "../../../services/api";
 
-const API_BASE = "http://localhost:5000/api/sessions";
+const SESSIONS_API_BASE = `${API_BASE}/sessions`;
 
 export const sessionsApi = {
   createSession: async (data) => {
-    const res = await axios.post(API_BASE, data, {
+    const res = await axios.post(SESSIONS_API_BASE, data, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res.data;
   },
 
   getSessions: async () => {
-    const res = await axios.get(API_BASE, {
+    const res = await axios.get(SESSIONS_API_BASE, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     return res.data;
@@ -19,7 +20,7 @@ export const sessionsApi = {
 
   startSession: async (id) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/start`,
+      `${SESSIONS_API_BASE}/${id}/start`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -30,7 +31,7 @@ export const sessionsApi = {
 
   endSession: async (id, endTime) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/end`,
+      `${SESSIONS_API_BASE}/${id}/end`,
       { endTime },
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -41,7 +42,7 @@ export const sessionsApi = {
 
   confirmSession: async (id) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/confirm`,
+      `${SESSIONS_API_BASE}/${id}/confirm`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -52,7 +53,7 @@ export const sessionsApi = {
 
   cancelSession: async (id) => {
     const res = await axios.put(
-      `${API_BASE}/${id}/cancel`,
+      `${SESSIONS_API_BASE}/${id}/cancel`,
       {},
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

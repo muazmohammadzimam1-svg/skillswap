@@ -2,11 +2,15 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const socketIo = require("socket.io");
 require("dotenv").config();
 
 const app = express();
+const isVercel = !!process.env.VERCEL;
+let server;
+let io;
 const JWT_SECRET = process.env.JWT_SECRET || "skillswap_secret";
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN || "http://localhost:5173",
@@ -74,6 +78,7 @@ const demoQuizRoutes = require("./Imtiaz/routes/demo-quizzes");
 
 // Use routes
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes); // fallback alias for direct auth requests
 app.use("/api/skills", skillRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/challenges", challengeRoutes);
@@ -101,197 +106,228 @@ app.use("/api/demo-quizzes", demoQuizRoutes);
 app.get("/health", (req, res) => {
   res.json({ ok: true, dbConnected: mongoose.connection.readyState === 1 });
 });
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, dbConnected: mongoose.connection.readyState === 1 });
+});
 
 async function connectDB() {
-  try {
-    const mongoUri =
-      process.env.MONGO_URI || "mongodb://localhost:27017/skillswap";
-    console.log("Connecting to MongoDB...");
+  if (global.__mongoConnectionPromise) {
+    return global.__mongoConnectionPromise;
+  }
 
-    const connectPromise = mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-
-    await Promise.race([
-      connectPromise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Connection timeout")), 12000),
-      ),
-    ]);
-    console.log("✅ MongoDB connected");
-  } catch (err) {
-    console.warn(
-      "⚠️ MongoDB Atlas connection failed, switching to in-memory database",
-    );
+  global.__mongoConnectionPromise = (async () => {
     try {
-      const { MongoMemoryServer } = require("mongodb-memory-server");
-      const mongod = await MongoMemoryServer.create();
-      await mongoose.connect(mongod.getUri(), {
+      const mongoUri =
+        process.env.MONGO_URI || "mongodb://localhost:27017/skillswap";
+      console.log("Connecting to MongoDB...");
+
+      const connectPromise = mongoose.connect(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
       });
-      console.log("✅ Using in-memory MongoDB");
-    } catch (fallbackErr) {
-      console.error("❌ Failed to initialize database:", fallbackErr.message);
-      process.exit(1);
+
+      await Promise.race([
+        connectPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Connection timeout")), 12000),
+        ),
+      ]);
+      console.log("✅ MongoDB connected");
+    } catch (err) {
+      console.warn(
+        "⚠️ MongoDB Atlas connection failed, switching to in-memory database",
+      );
+      try {
+        const tmpDir = path.join(os.tmpdir(), "mongodb-memory-server");
+        fs.mkdirSync(tmpDir, { recursive: true });
+        process.env.MONGOMS_DOWNLOAD_DIR =
+          process.env.MONGOMS_DOWNLOAD_DIR || tmpDir;
+
+        const { MongoMemoryServer } = require("mongodb-memory-server");
+        const mongod = await MongoMemoryServer.create();
+        await mongoose.connect(mongod.getUri(), {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        });
+        console.log("✅ Using in-memory MongoDB");
+      } catch (fallbackErr) {
+        console.error("❌ Failed to initialize database:", fallbackErr.message);
+        if (!isVercel) {
+          process.exit(1);
+        }
+      }
     }
-  }
+
+    return mongoose.connection;
+  })();
+
+  return global.__mongoConnectionPromise;
 }
 
-connectDB()
-  .then(() => {
-    const PORT = process.env.PORT || 5000;
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
+async function startServer() {
+  await connectDB();
 
-    // Socket.IO setup with proper CORS
-    const io = socketIo(server, {
-      cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"],
-        credentials: true,
-        allowedHeaders: ["Content-Type", "Authorization"],
-      },
-      transports: ["websocket", "polling"],
-    });
+  const PORT = process.env.PORT || 5000;
+  server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
 
-    app.locals.io = io;
+  // Socket.IO setup with proper CORS
+  io = socketIo(server, {
+    cors: {
+      origin: allowedOrigins,
+      methods: ["GET", "POST"],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
+    },
+    transports: ["websocket", "polling"],
+  });
 
-    io.on("connection", (socket) => {
-      console.log("User connected:", socket.id);
+  app.locals.io = io;
 
-      const token = socket.handshake.auth.token;
-      if (token) {
-        try {
-          const jwt = require("jsonwebtoken");
-          const decoded = jwt.verify(token, JWT_SECRET);
-          socket.userId = decoded.id;
-          socket.join(socket.userId.toString());
-          console.log(`User ${socket.userId} auto-joined room`);
-        } catch (err) {
-          socket.disconnect();
-          return;
-        }
-      } else {
+  io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
+
+    const token = socket.handshake.auth.token;
+    if (token) {
+      try {
+        const jwt = require("jsonwebtoken");
+        const decoded = jwt.verify(token, JWT_SECRET);
+        socket.userId = decoded.id;
+        socket.join(socket.userId.toString());
+        console.log(`User ${socket.userId} auto-joined room`);
+      } catch (err) {
         socket.disconnect();
         return;
       }
+    } else {
+      socket.disconnect();
+      return;
+    }
 
-      socket.on("join", (userId) => {
-        socket.join(userId);
-        console.log(`User ${userId} joined room`);
-      });
-
-      socket.on("sendMessage", async (data) => {
-        try {
-          const ChatMessage = require("./models/ChatMessage");
-          const User = require("./models/User");
-          const {
-            createNotification,
-          } = require("./services/notificationService");
-
-          const msg = new ChatMessage({
-            senderId: data.senderId,
-            receiverId: data.receiverId,
-            message: data.message,
-            messageType: "private",
-            isRead: false,
-            timestamp: new Date(),
-          });
-          await msg.save();
-
-          const sender = await User.findById(data.senderId).select("name");
-          const receiver = await User.findById(data.receiverId).select("name");
-          const senderName = sender?.name || "Unknown";
-          const receiverName = receiver?.name || "Unknown";
-
-          const messagePayload = {
-            _id: msg._id,
-            senderId: data.senderId,
-            senderName,
-            receiverId: data.receiverId,
-            receiverName,
-            message: data.message,
-            timestamp: msg.timestamp,
-            isRead: false,
-          };
-
-          // Emit to receiver's room
-          io.to(data.receiverId.toString()).emit(
-            "receiveMessage",
-            messagePayload,
-          );
-
-          // Emit conversation updates for receiver and sender
-          const updatedConversationForReceiver = {
-            userId: data.senderId,
-            userName: senderName,
-            lastMessage: data.message,
-            lastMessageTime: msg.timestamp,
-            unreadCount: 1,
-          };
-          const updatedConversationForSender = {
-            userId: data.receiverId,
-            userName: receiverName,
-            lastMessage: data.message,
-            lastMessageTime: msg.timestamp,
-            unreadCount: 0,
-          };
-
-          io.to(data.receiverId.toString()).emit(
-            "conversationUpdated",
-            updatedConversationForReceiver,
-          );
-          io.to(data.senderId.toString()).emit(
-            "conversationUpdated",
-            updatedConversationForSender,
-          );
-
-          // Notify receiver
-          await createNotification(
-            { app },
-            {
-              userId: data.receiverId,
-              title: `New message from ${senderName}`,
-              body: data.message,
-              type: "message",
-              data: {
-                senderId: data.senderId,
-                chatMessageId: msg._id,
-              },
-            },
-          );
-
-          // Confirm to sender
-          socket.emit("messageSent", {
-            ...messagePayload,
-            receiverName,
-          });
-        } catch (err) {
-          console.error("Message error:", err);
-          socket.emit("messageError", { error: err.message });
-        }
-      });
-
-      socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
-      });
+    socket.on("join", (userId) => {
+      socket.join(userId);
+      console.log(`User ${userId} joined room`);
     });
 
-    // Serve frontend build
-    const clientPath = path.join(__dirname, "..", "client", "dist");
-    if (fs.existsSync(clientPath)) {
-      app.use(express.static(clientPath));
-      app.get("*", (req, res) => {
-        res.sendFile(path.join(clientPath, "index.html"));
-      });
-    }
-  })
-  .catch((err) => {
+    socket.on("sendMessage", async (data) => {
+      try {
+        const ChatMessage = require("./models/ChatMessage");
+        const User = require("./models/User");
+        const {
+          createNotification,
+        } = require("./services/notificationService");
+
+        const msg = new ChatMessage({
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          message: data.message,
+          messageType: "private",
+          isRead: false,
+          timestamp: new Date(),
+        });
+        await msg.save();
+
+        const sender = await User.findById(data.senderId).select("name");
+        const receiver = await User.findById(data.receiverId).select("name");
+        const senderName = sender?.name || "Unknown";
+        const receiverName = receiver?.name || "Unknown";
+
+        const messagePayload = {
+          _id: msg._id,
+          senderId: data.senderId,
+          senderName,
+          receiverId: data.receiverId,
+          receiverName,
+          message: data.message,
+          timestamp: msg.timestamp,
+          isRead: false,
+        };
+
+        // Emit to receiver's room
+        io.to(data.receiverId.toString()).emit(
+          "receiveMessage",
+          messagePayload,
+        );
+
+        // Emit conversation updates for receiver and sender
+        const updatedConversationForReceiver = {
+          userId: data.senderId,
+          userName: senderName,
+          lastMessage: data.message,
+          lastMessageTime: msg.timestamp,
+          unreadCount: 1,
+        };
+        const updatedConversationForSender = {
+          userId: data.receiverId,
+          userName: receiverName,
+          lastMessage: data.message,
+          lastMessageTime: msg.timestamp,
+          unreadCount: 0,
+        };
+
+        io.to(data.receiverId.toString()).emit(
+          "conversationUpdated",
+          updatedConversationForReceiver,
+        );
+        io.to(data.senderId.toString()).emit(
+          "conversationUpdated",
+          updatedConversationForSender,
+        );
+
+        // Notify receiver
+        await createNotification(
+          { app },
+          {
+            userId: data.receiverId,
+            title: `New message from ${senderName}`,
+            body: data.message,
+            type: "message",
+            data: {
+              senderId: data.senderId,
+              chatMessageId: msg._id,
+            },
+          },
+        );
+
+        // Confirm to sender
+        socket.emit("messageSent", {
+          ...messagePayload,
+          receiverName,
+        });
+      } catch (err) {
+        console.error("Message error:", err);
+        socket.emit("messageError", { error: err.message });
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected:", socket.id);
+    });
+  });
+
+  // Serve frontend build only for local development / self-hosting
+  const clientPath = path.join(__dirname, "..", "client", "dist");
+  if (fs.existsSync(clientPath)) {
+    app.use(express.static(clientPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(clientPath, "index.html"));
+    });
+  }
+}
+
+if (!isVercel) {
+  startServer().catch((err) => {
     console.error("Server startup failed:", err);
     process.exit(1);
   });
+} else {
+  connectDB().catch((err) => {
+    console.error("Database connection failed:", err);
+  });
+}
+
+module.exports = app;
+module.exports.default = app;

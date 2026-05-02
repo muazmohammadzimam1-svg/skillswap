@@ -20,10 +20,10 @@
     "nodemailer": "^8.0.5",
     "pdfkit": "^0.18.0",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "mongodb-memory-server": "^11.0.1"
   },
   "devDependencies": {
-    "mongodb-memory-server": "^11.0.1",
     "nodemon": "^2.0.22"
   }
 }

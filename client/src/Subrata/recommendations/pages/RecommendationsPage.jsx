@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { notificationApi } from "../../../Zimam/notifications/services/notificationApi";
 import NotificationList from "../../../Zimam/notifications/components/NotificationList";
 import { FaSpinner } from "react-icons/fa";
+import api from "../../../services/api";
 
 export default function RecommendationsPage() {
   const location = useLocation();
@@ -55,10 +55,10 @@ export default function RecommendationsPage() {
     try {
       const token = localStorage.getItem("token");
       const [courseResponse, usersResponse] = await Promise.all([
-        axios.get(`http://localhost:5000/api/courses/${courseId}`, {
+        api.get(`/courses/${courseId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get("http://localhost:5000/api/users", {
+        api.get("/users", {
           headers: { Authorization: `Bearer ${token}` },
           params: { limit: 200 },
         }),
@@ -108,8 +108,8 @@ export default function RecommendationsPage() {
     }));
 
     try {
-      await axios.post(
-        "http://localhost:5000/api/notifications/send",
+      await api.post(
+        "/notifications/send",
         {
           userId: user._id,
           title: `Course recommendation: ${course.title}`,

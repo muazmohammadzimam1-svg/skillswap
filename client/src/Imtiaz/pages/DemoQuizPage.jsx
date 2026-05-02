@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, XCircle, Clock } from "lucide-react";
 import "./DemoQuizPage.css";
+import api from "../../services/api";
 
 const DemoQuizPage = () => {
   const { courseId } = useParams();
@@ -44,10 +44,9 @@ const DemoQuizPage = () => {
   const fetchQuiz = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/course-content/${courseId}/demo-quiz`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await api.get(`/course-content/${courseId}/demo-quiz`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (response.data.quiz) {
         setQuiz(response.data.quiz);
@@ -100,8 +99,8 @@ const DemoQuizPage = () => {
         selectedAnswer: userAnswers[q.id || q._id] || "",
       }));
 
-      const response = await axios.post(
-        `http://localhost:5000/api/course-content/${courseId}/demo-quiz/attempt`,
+      const response = await api.post(
+        `/course-content/${courseId}/demo-quiz/attempt`,
         {
           answers,
           timeSpent: quiz?.timeLimit

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Star,
@@ -10,6 +9,7 @@ import {
   Check,
 } from "lucide-react";
 import "./CoursePage.css";
+import api from "../services/api";
 
 const CoursePage = () => {
   const { courseId } = useParams();
@@ -45,10 +45,9 @@ const CoursePage = () => {
   const fetchCourseDetails = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/courses/${courseId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await api.get(`/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setCourse(response.data.course);
       setEnrollmentStatus(response.data.enrollmentStatus);
       setHasQuiz(response.data.course?.hasDemoQuiz || false);
@@ -71,8 +70,8 @@ const CoursePage = () => {
       setCouponError(null);
       setCouponSuccess(null);
 
-      const response = await axios.post(
-        "http://localhost:5000/api/coupons/validate",
+      const response = await api.post(
+        "/coupons/validate",
         {
           code: couponCode.toUpperCase(),
           courseId: courseId,
@@ -109,8 +108,8 @@ const CoursePage = () => {
       setPurchasing(true);
       setPurchaseStatus({ type: "loading", message: "Processing purchase..." });
 
-      const response = await axios.post(
-        `http://localhost:5000/api/courses/${courseId}/purchase`,
+      const response = await api.post(
+        `/courses/${courseId}/purchase`,
         {
           couponCode: couponCode || null,
           paymentMethod: "credits",
