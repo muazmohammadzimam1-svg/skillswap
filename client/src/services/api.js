@@ -1,6 +1,11 @@
 import axios from 'axios'
 
-const defaultApiBase = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api'
+// For production: use deployed backend URL, for dev: use local
+const defaultApiBase = typeof window !== 'undefined' 
+  ? (window.location.hostname === 'localhost' 
+    ? `${window.location.origin}/api`
+    : 'https://backend-2wzfmyh4k-muaz-mohammad-zimams-projects.vercel.app/api')
+  : '/api'
 export const API_BASE = import.meta.env.VITE_API_BASE || defaultApiBase
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE.replace(/\/api$/, '')
 
