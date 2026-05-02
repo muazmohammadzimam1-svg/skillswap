@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: skillswap
+    env: node
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    autoDeploy: true
+    repo: https://github.com/muazmohammadzimam1-svg/skillswap.git
