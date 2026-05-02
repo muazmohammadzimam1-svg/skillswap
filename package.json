@@ -10,7 +10,12 @@
   "scripts": {
     "build": "cd client && npm run build",
     "start": "node backend/server.js",
-    "dev": "npm run dev --prefix client"
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
   },
   "engines": {
     "node": ">=18.0.0"
