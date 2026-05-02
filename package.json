@@ -1,9 +1,14 @@
 {
+  "private": true,
   "name": "skillswap",
   "version": "1.0.0",
   "description": "SkillSwap - A platform for skill sharing and learning",
+  "workspaces": [
+    "backend",
+    "client"
+  ],
   "scripts": {
-    "build": "cd client && npm install && npm run build",
+    "build": "cd client && npm run build",
     "start": "node backend/server.js",
     "dev": "npm run dev --prefix client"
   },

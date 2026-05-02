@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'
+const defaultApiBase = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api'
+export const API_BASE = import.meta.env.VITE_API_BASE || defaultApiBase
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_BASE.replace(/\/api$/, '')
 
 const api = axios.create({
